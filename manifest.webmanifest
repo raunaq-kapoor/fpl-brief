@@ -1,0 +1,9 @@
+{
+  "name": "FPL Brief",
+  "short_name": "FPL Brief",
+  "start_url": "./#brief",
+  "display": "standalone",
+  "background_color": "#F3F5F2",
+  "theme_color": "#1B2A41",
+  "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
