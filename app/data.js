@@ -57,7 +57,7 @@ export async function requestRefresh() {
   const res = await api(s, `repos/${s.codeRepo}/actions/workflows/refresh.yml/dispatches`, {
     method: "POST",
     headers: { Accept: "application/vnd.github+json", "Content-Type": "application/json" },
-    body: JSON.stringify({ ref: s.branch, inputs: { force: "true" } }),
+    body: JSON.stringify({ ref: s.branch }),
   });
   if (res.status !== 204) throw new Error(`Couldn't start a refresh. ${explain(res.status, (await res.json().catch(() => ({}))).message, s.codeRepo, "Actions: Read and write")}`);
 }

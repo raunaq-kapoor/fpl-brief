@@ -64,12 +64,28 @@ view.addEventListener("click", async (e) => {
   btn.disabled = true;
   btn.textContent = "Starting…";
   try {
+    const before = state.bundle.generatedAt;
     await requestRefresh();
-    btn.textContent = "Refresh started, check back in 2 minutes";
+    btn.textContent = "Refreshing… usually 1–2 minutes";
+    if (await waitForNewer(before)) { render(); return; }
+    btn.textContent = "Still running. Reload in a minute.";
   } catch (err) {
     btn.textContent = err.message;
   }
 });
+
+// The run takes 1–2 minutes: check every 20 s for up to 5 minutes for a newer brief.
+async function waitForNewer(generatedAt) {
+  for (let i = 0; i < 15; i++) {
+    await new Promise((r) => setTimeout(r, 20000));
+    const r = await loadBundle();
+    if (r.from === "network" && r.bundle.generatedAt > generatedAt) {
+      Object.assign(state, { bundle: r.bundle, loadError: null, from: r.from });
+      return true;
+    }
+  }
+  return false;
+}
 
 view.addEventListener("submit", (e) => {
   if (e.target.dataset.form !== "settings") return;
