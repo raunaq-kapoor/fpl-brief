@@ -19,6 +19,15 @@ const api = (s, path, init = {}) => fetch(`https://api.github.com/${path}`, {
   headers: { Authorization: `Bearer ${s.token}`, Accept: "application/vnd.github.raw+json", "X-GitHub-Api-Version": "2022-11-28", ...init.headers },
 });
 
+/** Plain-language reading of a GitHub API failure, with GitHub's own message. */
+function explain(status, message, repo, permission) {
+  const said = message ? ` GitHub said: "${message}" (${status}).` : ` (GitHub ${status}.)`;
+  if (status === 401) return `The token wasn't accepted; it may be mistyped, revoked or expired. Paste it again in Settings.${said}`;
+  if (status === 403) return `The token can't read ${repo}. Edit the token on GitHub and give it ${permission} on ${repo}.${said}`;
+  if (status === 404) return `Nothing found in ${repo}. Either the token doesn't include that repo, or no brief has been written yet.${said}`;
+  return `Couldn't load from ${repo}.${said}`;
+}
+
 /** Returns { bundle, from: "network" | "cache" | "mock", error? } */
 export async function loadBundle() {
   const s = getSettings();
@@ -32,7 +41,7 @@ export async function loadBundle() {
   if (!s.token || !s.entry) return { bundle: null, from: "none", error: "Add your FPL team ID and GitHub token in Settings to load your brief." };
   try {
     const res = await api(s, `repos/${s.dataRepo}/contents/entries/${s.entry}/app/latest.json`, { cache: "no-store" });
-    if (!res.ok) throw new Error(res.status === 404 ? "No brief yet. The first scheduled run hasn't written one." : `GitHub said ${res.status}. Check the token in Settings.`);
+    if (!res.ok) throw new Error(explain(res.status, (await res.json().catch(() => ({}))).message, s.dataRepo, "Contents: Read-only"));
     const bundle = await res.json();
     safe(() => localStorage.setItem(CACHE_KEY, JSON.stringify(bundle)));
     return { bundle, from: "network" };
@@ -50,5 +59,5 @@ export async function requestRefresh() {
     headers: { Accept: "application/vnd.github+json", "Content-Type": "application/json" },
     body: JSON.stringify({ ref: s.branch, inputs: { force: "true" } }),
   });
-  if (res.status !== 204) throw new Error(`Couldn't start a refresh (GitHub said ${res.status}).`);
+  if (res.status !== 204) throw new Error(`Couldn't start a refresh. ${explain(res.status, (await res.json().catch(() => ({}))).message, s.codeRepo, "Actions: Read and write")}`);
 }
